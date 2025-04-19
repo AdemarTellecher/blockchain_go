@@ -9,7 +9,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/boltdb/bolt"
+	"go.etcd.io/bbolt"
 )
 
 const dbFile = "blockchain_%s.db"
@@ -19,7 +19,7 @@ const genesisCoinbaseData = "The Times 03/Jan/2009 Chancellor on brink of second
 // Blockchain implements interactions with a DB
 type Blockchain struct {
 	tip []byte
-	db  *bolt.DB
+	db  *bbolt.DB
 }
 
 // CreateBlockchain creates a new blockchain DB
@@ -35,12 +35,12 @@ func CreateBlockchain(address, nodeID string) *Blockchain {
 	cbtx := NewCoinbaseTX(address, genesisCoinbaseData)
 	genesis := NewGenesisBlock(cbtx)
 
-	db, err := bolt.Open(dbFile, 0600, nil)
+	db, err := bbolt.Open(dbFile, 0600, nil)
 	if err != nil {
 		log.Panic(err)
 	}
 
-	err = db.Update(func(tx *bolt.Tx) error {
+	err = db.Update(func(tx *bbolt.Tx) error {
 		b, err := tx.CreateBucket([]byte(blocksBucket))
 		if err != nil {
 			log.Panic(err)
@@ -77,7 +77,7 @@ func NewBlockchain(nodeID string) *Blockchain {
 	}
 
 	var tip []byte
-	db, err := bolt.Open(dbFile, 0600, nil)
+	db, err := bbolt.Open(dbFile, 0600, nil)
 	if err != nil {
 		log.Panic(err)
 	}
@@ -99,7 +99,7 @@ func NewBlockchain(nodeID string) *Blockchain {
 
 // AddBlock saves the block into the blockchain
 func (bc *Blockchain) AddBlock(block *Block) {
-	err := bc.db.Update(func(tx *bolt.Tx) error {
+	err := bc.db.Update(func(tx *bbolt.Tx) error {
 		b := tx.Bucket([]byte(blocksBucket))
 		blockInDb := b.Get(block.Hash)
 
@@ -208,7 +208,7 @@ func (bc *Blockchain) Iterator() *BlockchainIterator {
 func (bc *Blockchain) GetBestHeight() int {
 	var lastBlock Block
 
-	err := bc.db.View(func(tx *bolt.Tx) error {
+	err := bc.db.View(func(tx *bbolt.Tx) error {
 		b := tx.Bucket([]byte(blocksBucket))
 		lastHash := b.Get([]byte("l"))
 		blockData := b.Get(lastHash)
@@ -227,7 +227,7 @@ func (bc *Blockchain) GetBestHeight() int {
 func (bc *Blockchain) GetBlock(blockHash []byte) (Block, error) {
 	var block Block
 
-	err := bc.db.View(func(tx *bolt.Tx) error {
+	err := bc.db.View(func(tx *bbolt.Tx) error {
 		b := tx.Bucket([]byte(blocksBucket))
 
 		blockData := b.Get(blockHash)
@@ -277,7 +277,7 @@ func (bc *Blockchain) MineBlock(transactions []*Transaction) *Block {
 		}
 	}
 
-	err := bc.db.View(func(tx *bolt.Tx) error {
+	err := bc.db.View(func(tx *bbolt.Tx) error {
 		b := tx.Bucket([]byte(blocksBucket))
 		lastHash = b.Get([]byte("l"))
 
@@ -294,7 +294,7 @@ func (bc *Blockchain) MineBlock(transactions []*Transaction) *Block {
 
 	newBlock := NewBlock(transactions, lastHash, lastHeight+1)
 
-	err = bc.db.Update(func(tx *bolt.Tx) error {
+	err = bc.db.Update(func(tx *bbolt.Tx) error {
 		b := tx.Bucket([]byte(blocksBucket))
 		err := b.Put(newBlock.Hash, newBlock.Serialize())
 		if err != nil {

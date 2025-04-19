@@ -71,7 +71,11 @@ func CreateBlockchain(address, nodeID string) *Blockchain {
 // NewBlockchain creates a new Blockchain with genesis Block
 func NewBlockchain(nodeID string) *Blockchain {
 	dbFile := fmt.Sprintf(dbFile, nodeID)
-	if dbExists(dbFile) == false {
+	// if dbExists(dbFile) == false {
+	// 	fmt.Println("No existing blockchain found. Create one first.")
+	// 	os.Exit(1)
+	// }
+	if !dbExists(dbFile) {
 		fmt.Println("No existing blockchain found. Create one first.")
 		os.Exit(1)
 	}
@@ -82,7 +86,7 @@ func NewBlockchain(nodeID string) *Blockchain {
 		log.Panic(err)
 	}
 
-	err = db.Update(func(tx *bolt.Tx) error {
+	err = db.Update(func(tx *bbolt.Tx) error {
 		b := tx.Bucket([]byte(blocksBucket))
 		tip = b.Get([]byte("l"))
 
@@ -140,7 +144,10 @@ func (bc *Blockchain) FindTransaction(ID []byte) (Transaction, error) {
 		block := bci.Next()
 
 		for _, tx := range block.Transactions {
-			if bytes.Compare(tx.ID, ID) == 0 {
+			// if bytes.Compare(tx.ID, ID) == 0 {
+			// 	return *tx, nil
+			// }
+			if !bytes.Equal(tx.ID, ID) {
 				return *tx, nil
 			}
 		}
@@ -181,7 +188,7 @@ func (bc *Blockchain) FindUTXO() map[string]TXOutputs {
 				UTXO[txID] = outs
 			}
 
-			if tx.IsCoinbase() == false {
+			if !tx.IsCoinbase() {
 				for _, in := range tx.Vin {
 					inTxID := hex.EncodeToString(in.Txid)
 					spentTXOs[inTxID] = append(spentTXOs[inTxID], in.Vout)
@@ -233,7 +240,7 @@ func (bc *Blockchain) GetBlock(blockHash []byte) (Block, error) {
 		blockData := b.Get(blockHash)
 
 		if blockData == nil {
-			return errors.New("Block is not found.")
+			return errors.New("Block is not found")
 		}
 
 		block = *DeserializeBlock(blockData)
@@ -272,7 +279,10 @@ func (bc *Blockchain) MineBlock(transactions []*Transaction) *Block {
 
 	for _, tx := range transactions {
 		// TODO: ignore transaction if it's not valid
-		if bc.VerifyTransaction(tx) != true {
+		// if bc.VerifyTransaction(tx) != true {
+		// 	log.Panic("ERROR: Invalid transaction")
+		// }
+		if !bc.VerifyTransaction(tx) {
 			log.Panic("ERROR: Invalid transaction")
 		}
 	}

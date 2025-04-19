@@ -76,7 +76,8 @@ func bytesToCommand(bytes []byte) string {
 		}
 	}
 
-	return fmt.Sprintf("%s", command)
+	//return fmt.Sprintf("%s", command)
+	return string(command)
 }
 
 func extractCommand(request []byte) []byte {
@@ -236,7 +237,10 @@ func handleInv(request []byte, bc *Blockchain) {
 
 		newInTransit := [][]byte{}
 		for _, b := range blocksInTransit {
-			if bytes.Compare(b, blockHash) != 0 {
+			// if bytes.Compare(b, blockHash) != 0 {
+			// 	newInTransit = append(newInTransit, b)
+			// }
+			if bytes.Equal(b, blockHash) {
 				newInTransit = append(newInTransit, b)
 			}
 		}

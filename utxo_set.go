@@ -4,7 +4,7 @@ import (
 	"encoding/hex"
 	"log"
 
-	"github.com/boltdb/bolt"
+	"go.etcd.io/bbolt"
 )
 
 const utxoBucket = "chainstate"
@@ -20,7 +20,7 @@ func (u UTXOSet) FindSpendableOutputs(pubkeyHash []byte, amount int) (int, map[s
 	accumulated := 0
 	db := u.Blockchain.db
 
-	err := db.View(func(tx *bolt.Tx) error {
+	err := db.View(func(tx *bbolt.Tx) error {
 		b := tx.Bucket([]byte(utxoBucket))
 		c := b.Cursor()
 
@@ -50,7 +50,7 @@ func (u UTXOSet) FindUTXO(pubKeyHash []byte) []TXOutput {
 	var UTXOs []TXOutput
 	db := u.Blockchain.db
 
-	err := db.View(func(tx *bolt.Tx) error {
+	err := db.View(func(tx *bbolt.Tx) error {
 		b := tx.Bucket([]byte(utxoBucket))
 		c := b.Cursor()
 
@@ -78,7 +78,7 @@ func (u UTXOSet) CountTransactions() int {
 	db := u.Blockchain.db
 	counter := 0
 
-	err := db.View(func(tx *bolt.Tx) error {
+	err := db.View(func(tx *bbolt.Tx) error {
 		b := tx.Bucket([]byte(utxoBucket))
 		c := b.Cursor()
 
@@ -100,9 +100,9 @@ func (u UTXOSet) Reindex() {
 	db := u.Blockchain.db
 	bucketName := []byte(utxoBucket)
 
-	err := db.Update(func(tx *bolt.Tx) error {
+	err := db.Update(func(tx *bbolt.Tx) error {
 		err := tx.DeleteBucket(bucketName)
-		if err != nil && err != bolt.ErrBucketNotFound {
+		if err != nil && err != bbolt.ErrBucketNotFound {
 			log.Panic(err)
 		}
 
@@ -119,7 +119,7 @@ func (u UTXOSet) Reindex() {
 
 	UTXO := u.Blockchain.FindUTXO()
 
-	err = db.Update(func(tx *bolt.Tx) error {
+	err = db.Update(func(tx *bbolt.Tx) error {
 		b := tx.Bucket(bucketName)
 
 		for txID, outs := range UTXO {
@@ -136,6 +136,9 @@ func (u UTXOSet) Reindex() {
 
 		return nil
 	})
+	if err != nil {
+		log.Panic(err)
+	}
 }
 
 // Update updates the UTXO set with transactions from the Block
@@ -143,11 +146,11 @@ func (u UTXOSet) Reindex() {
 func (u UTXOSet) Update(block *Block) {
 	db := u.Blockchain.db
 
-	err := db.Update(func(tx *bolt.Tx) error {
+	err := db.Update(func(tx *bbolt.Tx) error {
 		b := tx.Bucket([]byte(utxoBucket))
 
 		for _, tx := range block.Transactions {
-			if tx.IsCoinbase() == false {
+			if !tx.IsCoinbase() {
 				for _, vin := range tx.Vin {
 					updatedOuts := TXOutputs{}
 					outsBytes := b.Get(vin.Txid)

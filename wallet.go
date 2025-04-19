@@ -7,8 +7,6 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"log"
-
-	"golang.org/x/crypto/ripemd160"
 )
 
 const version = byte(0x00)
@@ -45,7 +43,7 @@ func (w Wallet) GetAddress() []byte {
 func HashPubKey(pubKey []byte) []byte {
 	publicSHA256 := sha256.Sum256(pubKey)
 
-	RIPEMD160Hasher := ripemd160.New()
+	RIPEMD160Hasher := sha256.New()
 	_, err := RIPEMD160Hasher.Write(publicSHA256[:])
 	if err != nil {
 		log.Panic(err)
@@ -63,7 +61,8 @@ func ValidateAddress(address string) bool {
 	pubKeyHash = pubKeyHash[1 : len(pubKeyHash)-addressChecksumLen]
 	targetChecksum := checksum(append([]byte{version}, pubKeyHash...))
 
-	return bytes.Compare(actualChecksum, targetChecksum) == 0
+	result := bytes.Equal(actualChecksum, targetChecksum)
+	return result
 }
 
 // Checksum generates a checksum for a public key

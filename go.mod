@@ -3,10 +3,8 @@ module github.com/AdemarTellecher/blockchain_go
 go 1.24.2
 
 require (
-	github.com/boltdb/bolt v1.3.1
 	github.com/stretchr/testify v1.10.0
 	go.etcd.io/bbolt v1.4.0
-	golang.org/x/crypto v0.37.0
 )
 
 require (
